@@ -23,17 +23,17 @@ test .env && source .env
 #   Writes status to stdout
 #######################################
 _check_uptime() {
-	domain="$1"
+  domain="$1"
 
   if [[ -z $domain ]]; then
     echo "[ERROR] - Domain Missing"
     exit 4
   fi
 
-	status_code=$(curl -sSLX GET -o /dev/null -w "%{http_code}\n" --max-time "15" --connect-timeout "10" https://"$domain")
+  status_code=$(curl -sSLX GET -o /dev/null -w "%{http_code}\n" --max-time "15" --connect-timeout "10" https://"$domain")
 
-	echo "$status_code"
-	exit 0
+  echo "$status_code"
+  exit 0
 }
 
 #######################################
@@ -47,35 +47,35 @@ _check_uptime() {
 #   Writes SSL status to stdout
 #######################################
 _check_ssl_expiration() {
-	domain="$1"
+  domain="$1"
 
-	if [[ -z $domain ]]; then
+  if [[ -z $domain ]]; then
     echo "[ERROR] - Domain Missing"
     exit 4
   fi
 
   #TODO: Make port optional so if customers have SSL installed on different ports and they want to monitor it, they can.
 
-	port="443"
-	result=$(echo -n Q | openssl s_client -servername "$domain" -connect "$domain":"$port" 2> /dev/null | openssl x509 -noout -checkend 2592000)
+  port="443"
+  result=$(echo -n Q | openssl s_client -servername "$domain" -connect "$domain":"$port" 2> /dev/null | openssl x509 -noout -checkend 2592000)
 
-	echo "$result"
-	exit 0
+  echo "$result"
+  exit 0
 }
 
 _check_domain_expiration() {
-	domain="$1"
+  domain="$1"
 
-	if [[ -z $domain ]]; then
-	  echo "[ERROR] - Domain Missing"
-	  exit 4
-	fi
+  if [[ -z $domain ]]; then
+    echo "[ERROR] - Domain Missing"
+    exit 4
+  fi
 
-	domain=$(echo "$domain" | egrep -Eo "[^.]*(\.[^.]{2,3}){1,2}$")
+  domain=$(echo "$domain" | egrep -Eo "[^.]*(\.[^.]{2,3}){1,2}$")
 
   #	whois $domain
-	#TODO: There are restricitons on domains .com.br, .br and others due country restrictions. Re-evaluate this feature in the future. 
-	exit 0
+  #TODO: There are restricitons on domains .com.br, .br and others due country restrictions. Re-evaluate this feature in the future.
+  exit 0
 
 }
 
@@ -109,15 +109,15 @@ _maybe_remove_scan_file() {
 #   Writes malware status to stdout
 #######################################
 _check_for_malware() {
-	domain="$1"
+  domain="$1"
 
   # Removed previous scan after 24 hours.
   _maybe_remove_scan_file "$1"
 
-	result_file="./virus_total/domain/${domain}.json"
+  result_file="./virus_total/domain/${domain}.json"
 
   if [[ ! -f $result_file ]]; then
-	  curl -sS --location "https://www.virustotal.com/api/v3/domains/$domain" --header "x-apikey: $virus_total_api_key" > "$result_file"
+    curl -sS --location "https://www.virustotal.com/api/v3/domains/$domain" --header "x-apikey: $virus_total_api_key" > "$result_file"
   fi
 
   virus_summary=$(cat "$result_file" | jq '.data | .attributes | .last_analysis_stats')
@@ -144,7 +144,7 @@ _check_for_malware() {
     echo "Virus has not been detected on the domain $domain."
   fi
 
-	exit 0
+  exit 0
 }
 
 _parse_args() {
