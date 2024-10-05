@@ -14,4 +14,10 @@ monitor.sh check_for_malware <domain> [--verbose]
 
 Currently, to check for malware, we are using [Virus Total](https://www.virustotal.com/). In order to use the malware checks, you will need to create an account with [Virus Total](https://www.virustotal.com/) and create an API key. They offer a free plan up to 500 checks per day. No commercial use. Please consider using a paid version to support their service if you can. 
 
+## Emails 
+
+Currently this tool has been tested using Google SMTP. Please do not use your actual email password to send emails. Please generate an App password for the SMTP connection. Here is [an article](https://support.google.com/accounts/answer/185833) to help you in the process. 
+
+Note: The password should contain 16 characters and should not contain spaces. 
+
 

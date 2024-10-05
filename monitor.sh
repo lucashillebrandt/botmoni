@@ -2,7 +2,7 @@
 #
 # Adds a few custom commands to verify a domain status, like SSL status, uptime and more.
 # Author: Lucas Hillebrandt
-# Version: 1.1
+# Version: 1.2
 
 #######################################
 # Validates that the required plugins are installed.
@@ -282,6 +282,9 @@ _check_for_malware() {
 
         if [[ $status == "malicious" || $status == "suspicious" ]]; then
           echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
+          if [[ -z $arg_skip_email ]]; then
+            _send_email "[EMERGENCY] Antivirus $engine has flagged the domain $domain as $status" "The Antivirus $engine has flagged the domain $domain as $status. Please review"
+          fi
         fi
       done
 
@@ -290,6 +293,40 @@ _check_for_malware() {
       echo "Virus has not been detected on the domain $domain."
     fi
   done
+}
+
+#######################################
+# Sends an email using the _send_mail function.
+# Globals:
+#   arg_email: Override recipient's email address
+#   to_email: Default recipient's email address
+# Arguments:
+#   subject: Email subject
+#   message: Email body
+# Outputs:
+#   Writes status to stdout
+#######################################
+_send_email() {
+  local to
+  local subject
+  local message
+
+  # Load the email.sh script and use the _send_mail function.
+  source ./email.sh
+
+  # Get the recipient's email address
+  if [[ -n $arg_email ]]; then
+    to="$arg_email"
+  else
+    to="$to_email"
+  fi
+
+  # Get the email subject and message
+  subject="$1"
+  message="$2"
+
+  # Send the email using the _send_mail function.
+  _send_mail "$to" "$subject" "$message"
 }
 
 _parse_args() {
@@ -332,6 +369,6 @@ case "$1" in
         echo -e "Usage:\n"
         echo -e "monitor.sh check_uptime <domain> [--verbose]"
         echo -e "monitor.sh check_ssl_expiration <domain> [--verbose]"
-        echo -e "monitor.sh check_for_malware [<domain>] [--file=<path_to_file>][--verbose]"
+        echo -e "monitor.sh check_for_malware [<domain>] [--file=<path_to_file>][--email=<email_address>][--skip-email][--verbose]"
         ;;
 esac
