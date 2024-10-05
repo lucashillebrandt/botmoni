@@ -132,15 +132,18 @@ _check_domain_expiration() {
 _maybe_remove_scan_file() {
   local domain="$1"
 
+
   if [[ -z "$domain" ]]; then
     echo "[ERROR] - Domain Missing"
     exit 4
   fi
 
-  if [[ -f "./virus_total/${domain}.json" ]]; then
+  if [[ -f "./virus_total/domain/${domain}.json" ]]; then
     # Check if file is older than 1 day
-    if [[ $(find "./virus_total/${domain}.json" -mtime +1) ]]; then
-      rm "./virus_total/${domain}.json"
+
+    if [[ $(find "./virus_total/domain/${domain}.json" -mtime +1) ]]; then
+
+      rm "./virus_total/domain/${domain}.json"
     fi
   fi
 }
