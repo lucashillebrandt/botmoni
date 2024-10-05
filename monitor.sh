@@ -2,10 +2,53 @@
 #
 # Adds a few custom commands to verify a domain status, like SSL status, uptime and more.
 # Author: Lucas Hillebrandt
-# Version: 1.0
+# Version: 1.1
 
+#######################################
+# Validates that the required plugins are installed.
+# Globals:
+#     None
+# Arguments:
+#     None
+# Outputs:
+#     Installs required plugins if they are not already installed, and exits with an error code if installation fails.
+#######################################
+_validate_plugins() {
+    # jq is used to parse JSON data.
+    if [[ ! -f /usr/bin/jq ]]; then
+        echo "[INFO] - Installing jq package."
+        sudo apt-get install jq -y
 
-# Tools required: curl, jq,  TODO: Add an IF to block script execution if needed tools are not installed.
+        if [[ "$?" -ne 0 ]]; then
+            echo "[ERROR] - Could not install jq package. Please check your system."
+            exit 1
+        fi
+    fi
+
+    # OpenSSL is used to check the SSL status of the domains.
+    if [[ ! -f /usr/bin/openssl ]]; then
+        echo "[INFO] - Installing openssl package."
+        sudo apt-get install openssl -y
+
+        if [[ "$?" -ne 0 ]]; then
+            echo "[ERROR] - Could not install openssl package. Please check your system."
+            exit 1
+        fi
+    fi
+
+    # curl is used to check the uptime of the domain and malware status.
+    if [[ ! -f /usr/bin/curl ]]; then
+        echo "[INFO] - Installing curl package."
+        sudo apt-get install curl -y
+
+        if [[ "$?" -ne 0 ]]; then
+            echo "[ERROR] - Could not install curl package. Please check your system."
+            exit 1
+        fi
+    fi
+}
+
+_validate_plugins
 
 if [[ ! -d ./virus_total/domain ]]; then
   mkdir -p ./virus_total/domain;
@@ -87,15 +130,18 @@ _check_domain_expiration() {
 #   Domain
 #######################################
 _maybe_remove_scan_file() {
-  domain="$1"
+  local domain="$1"
 
-  if [[ -z $domain ]]; then
+  if [[ -z "$domain" ]]; then
     echo "[ERROR] - Domain Missing"
     exit 4
   fi
 
-  if [[ -f ./virus_total/"${domain}.json" ]]; then
-    find ./virus_total/ -name "${domain}.json" -mtime +1 -delete &> /dev/null
+  if [[ -f "./virus_total/${domain}.json" ]]; then
+    # Check if file is older than 1 day
+    if [[ $(find "./virus_total/${domain}.json" -mtime +1) ]]; then
+      rm "./virus_total/${domain}.json"
+    fi
   fi
 }
 
@@ -143,8 +189,6 @@ _check_for_malware() {
   else
     echo "Virus has not been detected on the domain $domain."
   fi
-
-  exit 0
 }
 
 _parse_args() {
