@@ -50,10 +50,6 @@ _validate_plugins() {
 
 _validate_plugins
 
-if [[ ! -d ./virus_total/domain ]]; then
-  mkdir -p ./virus_total/domain;
-fi
-
 # Import Environment Variables
 test .env && source .env
 
@@ -150,6 +146,72 @@ _maybe_remove_scan_file() {
 }
 
 #######################################
+# Checks if the VirusTotal API quota has been exceeded.
+# Globals:
+#   virus_total_api_key
+# Arguments:
+#   None
+# Outputs:
+#   Writes "wait" if the quota has been exceeded
+#######################################
+_check_virus_total_quota() {
+  if [[ -z "$virus_total_api_key" ]]; then
+    echo "[ERROR] - Virus Total API Key Missing"
+    exit 4
+  fi
+
+  local quota
+  local quota_dir="./virus_total/quota"
+  mkdir -p "$quota_dir"
+
+  local hourly_exhausted_file="$quota_dir/hourly_quota_exhausted"
+  local hourly_quota_allowed
+  local hourly_quota_used
+  local daily_exhausted_file="$quota_dir/daily_quota_exhausted"
+  local daily_quota_allowed
+  local daily_quota_used
+
+  if [[ -f "$hourly_exhausted_file" && $(find "$hourly_exhausted_file" -mmin +60) ]]; then
+    rm "$hourly_exhausted_file"
+  fi
+
+  if [[ -f "$daily_exhausted_file" && $(find "$daily_exhausted_file" -mmin +1440) ]]; then
+    rm "$daily_exhausted_file"
+  fi
+
+  if [[ -f "$hourly_exhausted_file" || -f "$daily_exhausted_file" ]]; then
+    echo "wait"
+    exit 0
+  fi
+
+  # Get the quota
+  quota=$(curl -sSX GET "https://www.virustotal.com/api/v3/users/$virus_total_api_key/overall_quotas" \
+    --header 'accept: application/json' --header "x-apikey: $virus_total_api_key")
+
+  # Extract the quota information
+  hourly_quota_allowed=$(echo "$quota" | jq '.data.api_requests_hourly.user.allowed' | sed 's/"//g')
+  hourly_quota_used=$(echo "$quota" | jq '.data.api_requests_hourly.user.used' | sed 's/"//g')
+  daily_quota_allowed=$(echo "$quota" | jq '.data.api_requests_daily.user.allowed' | sed 's/"//g')
+  daily_quota_used=$(echo "$quota" | jq '.data.api_requests_daily.user.used' | sed 's/"//g')
+
+  if [[ -n "$hourly_quota_allowed" && -n "$hourly_quota_used" && -n "$daily_quota_allowed" && -n "$daily_quota_used" ]]; then
+    # If the hourly quota has been exceeded, mark the quota as exhausted
+    if [[ "$hourly_quota_used" -eq "$hourly_quota_allowed" ]]; then
+      echo "Hourly quota Exhausted: $hourly_quota_used / $hourly_quota_allowed. Daily Quota: $daily_quota_used / $daily_quota_allowed" > "$hourly_exhausted_file"
+      echo "wait"
+      exit 0
+    fi
+
+    # If the daily quota has been exceeded, mark the quota as exhausted
+    if [[ "$daily_quota_used" -eq "$daily_quota_allowed" ]]; then
+      echo "Daily quota Exhausted: $daily_quota_used / $daily_quota_allowed" > "$daily_exhausted_file"
+      echo "wait"
+      exit 0
+    fi
+  fi
+}
+
+#######################################
 # Checks if the site has been identified with Malware via VirusTotal.
 # Globals:
 #   None
@@ -161,13 +223,41 @@ _maybe_remove_scan_file() {
 _check_for_malware() {
   domain="$1"
 
+  if [[ -z $domain ]]; then
+    echo "[ERROR] - Domain Missing"
+    exit 4
+  fi
+
+  # Checks if the directory to store the results exists. If not, create it.
+  if [[ ! -d ./virus_total/domain ]]; then
+    mkdir -p ./virus_total/domain;
+  fi
+
   # Removed previous scan after 24 hours.
   _maybe_remove_scan_file "$1"
+  quota=$(_check_virus_total_quota)
 
   result_file="./virus_total/domain/${domain}.json"
 
   if [[ ! -f $result_file ]]; then
+    if [[ -n $quota && ! -f $result_file  ]]; then
+      echo "[ERROR] Virus Total Quota exceeded. Will not try to check domain. Please try again later."
+      exit 5
+    fi
+
     curl -sS --location "https://www.virustotal.com/api/v3/domains/$domain" --header "x-apikey: $virus_total_api_key" > "$result_file"
+  fi
+
+  error=$(cat "$result_file" | jq '.error | .code' | sed 's/"//g')
+
+  if [[ -n $error  && $error == "QuotaExceededError" ]]; then
+    echo "[ERROR] Virus Total Quota Exceeded Error. Please try again later."
+
+    if [[ -f $result_file ]]; then
+      rm $result_file
+    fi
+
+    exit 5
   fi
 
   virus_summary=$(cat "$result_file" | jq '.data | .attributes | .last_analysis_stats')
