@@ -221,68 +221,75 @@ _check_virus_total_quota() {
 #   Writes malware status to stdout
 #######################################
 _check_for_malware() {
-  domain="$1"
+  domains="$1"
 
-  if [[ -z $domain ]]; then
+  if [[ -n $arg_file && -f $arg_file ]]; then
+    domains=$(cat $arg_file)
+  fi
+
+  if [[ -z $domains ]]; then
     echo "[ERROR] - Domain Missing"
     exit 4
   fi
 
-  # Checks if the directory to store the results exists. If not, create it.
-  if [[ ! -d ./virus_total/domain ]]; then
-    mkdir -p ./virus_total/domain;
-  fi
+  # shellcheck disable=SC2068
+  for domain in ${domains[@]}; do
+    # Checks if the directory to store the results exists. If not, create it.
+    if [[ ! -d ./virus_total/domain ]]; then
+      mkdir -p ./virus_total/domain;
+    fi
 
-  # Removed previous scan after 24 hours.
-  _maybe_remove_scan_file "$1"
-  quota=$(_check_virus_total_quota)
+    # Removed previous scan after 24 hours.
+    _maybe_remove_scan_file "$1"
+    quota=$(_check_virus_total_quota)
 
-  result_file="./virus_total/domain/${domain}.json"
+    result_file="./virus_total/domain/${domain}.json"
 
-  if [[ ! -f $result_file ]]; then
-    if [[ -n $quota && ! -f $result_file  ]]; then
-      echo "[ERROR] Virus Total Quota exceeded. Will not try to check domain. Please try again later."
+    if [[ ! -f $result_file ]]; then
+      if [[ -n $quota && ! -f $result_file  ]]; then
+        echo "[ERROR] Virus Total Quota exceeded. Will not try to check domain. Please try again later."
+        exit 5
+      fi
+
+      curl -sS --location "https://www.virustotal.com/api/v3/domains/$domain" --header "x-apikey: $virus_total_api_key" > "$result_file"
+    fi
+
+    error=$(cat "$result_file" | jq '.error | .code' | sed 's/"//g')
+
+    if [[ -n $error  && $error == "QuotaExceededError" ]]; then
+      echo "[ERROR] Virus Total Quota Exceeded Error. Please try again later."
+
+      if [[ -f $result_file ]]; then
+        rm $result_file
+      fi
+
       exit 5
     fi
 
-    curl -sS --location "https://www.virustotal.com/api/v3/domains/$domain" --header "x-apikey: $virus_total_api_key" > "$result_file"
-  fi
+    virus_summary=$(cat "$result_file" | jq '.data | .attributes | .last_analysis_stats')
+    malicious=$(echo "$virus_summary" | jq '.malicious' | sed 's/"//g')
+    suspicious=$(echo "$virus_summary" | jq '.suspicious' | sed 's/"//g')
 
-  error=$(cat "$result_file" | jq '.error | .code' | sed 's/"//g')
+    # Checks for the summary result from VirusTotal. If we have Malicious or Suspicious, there is a problem.
+    if [[ $malicious -gt 0 || $suspicious -gt 0 ]]; then
+      virus_checks=$(mktemp)
+      cat "$result_file" | jq '.data | .attributes | .last_analysis_results | .[] | .engine_name + "," + .result' > "$virus_checks"
 
-  if [[ -n $error  && $error == "QuotaExceededError" ]]; then
-    echo "[ERROR] Virus Total Quota Exceeded Error. Please try again later."
+      # Starts checking Virus status by engine.
+      cat "$virus_checks" | while read -r line ; do
+        engine=$(echo "$line" | cut -d ',' -f1 | sed 's/"//g')
+        status=$(echo "$line" | cut -d ',' -f2 | sed 's/"//g')
 
-    if [[ -f $result_file ]]; then
-      rm $result_file
+        if [[ $status == "malicious" || $status == "suspicious" ]]; then
+          echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
+        fi
+      done
+
+      rm "$virus_checks" # Cleanup after looping antiviruses.
+    else
+      echo "Virus has not been detected on the domain $domain."
     fi
-
-    exit 5
-  fi
-
-  virus_summary=$(cat "$result_file" | jq '.data | .attributes | .last_analysis_stats')
-  malicious=$(echo "$virus_summary" | jq '.malicious' | sed 's/"//g')
-  suspicious=$(echo "$virus_summary" | jq '.suspicious' | sed 's/"//g')
-
-  # Checks for the summary result from VirusTotal. If we have Malicious or Suspicious, there is a problem.
-  if [[ $malicious -gt 0 || $suspicious -gt 0 ]]; then
-    virus_checks=$(mktemp)
-    cat "$result_file" | jq '.data | .attributes | .last_analysis_results | .[] | .engine_name + "," + .result' > "$virus_checks"
-
-    # Starts checking Virus status by engine.
-    cat "$virus_checks" | while read -r line ; do
-      engine=$(echo "$line" | cut -d ',' -f1 | sed 's/"//g')
-      status=$(echo "$line" | cut -d ',' -f2 | sed 's/"//g')
-
-      if [[ $status == "malicious" || $status == "suspicious" ]]; then
-        echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
-      fi
-    done
-
-    rm "$virus_checks" # Cleanup after looping antiviruses.
-  else
-    echo "Virus has not been detected on the domain $domain."
-  fi
+  done
 }
 
 _parse_args() {
@@ -325,6 +332,6 @@ case "$1" in
         echo -e "Usage:\n"
         echo -e "monitor.sh check_uptime <domain> [--verbose]"
         echo -e "monitor.sh check_ssl_expiration <domain> [--verbose]"
-        echo -e "monitor.sh check_for_malware <domain> [--verbose]"
+        echo -e "monitor.sh check_for_malware [<domain>] [--file=<path_to_file>][--verbose]"
         ;;
 esac
