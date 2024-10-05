@@ -54,6 +54,7 @@ if [[ ! -d ./virus_total/domain ]]; then
   mkdir -p ./virus_total/domain;
 fi
 
+# Import Environment Variables
 test .env && source .env
 
 #######################################
