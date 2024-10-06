@@ -1,8 +1,8 @@
 #!/bin/bash
-#
-# Adds a few custom commands to verify a domain status, like SSL status, uptime and more.
+# botmoni.sh - A domain monitoring plugin for checking SSL status, uptime, and malware detection.
 # Author: Lucas Hillebrandt
 # Version: 1.3
+# LICENSE: GPLv3
 
 #######################################
 # Validates that the required plugins are installed.
@@ -372,8 +372,8 @@ case "$1" in
         ;;
     *)
         echo -e "Usage:\n"
-        echo -e "monitor.sh check_uptime <domain> [--verbose]"
-        echo -e "monitor.sh check_ssl_expiration <domain> [--verbose]"
-        echo -e "monitor.sh check_for_malware [<domain>] [--file=<path_to_file>][--email=<email_address>][--skip-email][--skip-slack][--verbose]"
+        echo -e "botmoni.sh check_uptime <domain> [--verbose]"
+        echo -e "botmoni.sh check_ssl_expiration <domain> [--verbose]"
+        echo -e "botmoni.sh check_for_malware [<domain>] [--file=<path_to_file>][--email=<email_address>][--skip-email][--skip-slack][--verbose]"
         ;;
 esac

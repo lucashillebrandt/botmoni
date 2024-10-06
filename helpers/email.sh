@@ -1,6 +1,6 @@
 #!/bin/bash
-#
-# This is a helper script to send emails. We'll only accept sending emails via SMTP.
+# BotMoni
+# email.sh - This is a helper script to send emails. We'll only accept sending emails via SMTP.
 # Author: Lucas Hillebrandt
 # Version: 1.3
 # LICENSE: GPLv3
