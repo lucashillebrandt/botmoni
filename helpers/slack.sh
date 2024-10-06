@@ -1,6 +1,6 @@
 #!/bin/bash
-#
-# This is a helper script to send Slack notifications.
+# BotMoni
+# slack.sh - This is a helper script to send Slack notifications.
 # Author: Lucas Hillebrandt
 # Version: 1.3
 # LICENSE: GPLv3
