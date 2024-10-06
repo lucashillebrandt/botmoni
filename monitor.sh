@@ -2,7 +2,7 @@
 #
 # Adds a few custom commands to verify a domain status, like SSL status, uptime and more.
 # Author: Lucas Hillebrandt
-# Version: 1.2
+# Version: 1.3
 
 #######################################
 # Validates that the required plugins are installed.
@@ -285,6 +285,11 @@ _check_for_malware() {
           if [[ -z $arg_skip_email ]]; then
             _send_email "[EMERGENCY] Antivirus $engine has flagged the domain $domain as $status" "The Antivirus $engine has flagged the domain $domain as $status. Please review"
           fi
+
+          if [[ -n $slack_malware_webhook && -z $arg_skip_slack ]]; then
+            source ./helpers/slack.sh
+            send_slack $slack_malware_webhook "$domain"
+          fi
         fi
       done
 
@@ -312,7 +317,7 @@ _send_email() {
   local message
 
   # Load the email.sh script and use the _send_mail function.
-  source ./email.sh
+  source ./helpers/email.sh
 
   # Get the recipient's email address
   if [[ -n $arg_email ]]; then
@@ -369,6 +374,6 @@ case "$1" in
         echo -e "Usage:\n"
         echo -e "monitor.sh check_uptime <domain> [--verbose]"
         echo -e "monitor.sh check_ssl_expiration <domain> [--verbose]"
-        echo -e "monitor.sh check_for_malware [<domain>] [--file=<path_to_file>][--email=<email_address>][--skip-email][--verbose]"
+        echo -e "monitor.sh check_for_malware [<domain>] [--file=<path_to_file>][--email=<email_address>][--skip-email][--skip-slack][--verbose]"
         ;;
 esac
