@@ -1,5 +1,5 @@
 #!/bin/bash
 
-if [[ -f /usr/bin/botmoni ]]; then
+if [[ -f /usr/bin/botmoni || -L /usr/bin/botmoni ]]; then
     rm /usr/bin/botmoni
 fi
