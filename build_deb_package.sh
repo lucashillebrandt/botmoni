@@ -30,15 +30,12 @@ _publish_git_tag() {
 
     cd $git_folder
 
-    echo "$git_folder"
-    echo "$tag"
+    git add .
+    git commit -m "Launches tag $tag"
+    git push 
 
-
-#    git add .
-#    git commit -m "Launches tag $tag"
-#    git push 
-
-#    git tag -a $tag -m "Launches tag $tag" 
+    git tag -a $tag -m "Launches tag $tag" 
+    git push origin $tag
 }
 
 _build() {
