@@ -1,3 +1,5 @@
 #!/bin/bash
 
-ln -s /usr/share/botmoni/botmoni.sh /usr/bin/botmoni
+if [[ ! -f /usr/bin/botmoni ]]; then
+    ln -s /usr/share/botmoni/botmoni.sh /usr/bin/botmoni
+fi
