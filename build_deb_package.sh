@@ -6,38 +6,78 @@
 
 #TODO: Instead of a build file, convert this process into a CI process that can be managed by Jenkins or any other CI tool. 
 
-
+#######################################
+# Updates the changelog with the provided information.
+#
+# Args:
+#   version: The new version number for the package.
+#   full_name: The full name of the person making the change.
+#   email: The email address of the person making the change.
+#   changelog: The changelog message.
+#
+# Returns:
+#   0 if the command was successful, 1 otherwise.
+#######################################
 _update_changelog() {
-    version="$1"
-    full_name="$2"
-    email="$3"
-    changelog="$4"
+    local version="$1"
+    local full_name="$2"
+    local email="$3"
+    local changelog="$4"
 
+    # Set the required environment variables.
     export DEBFULLNAME="$full_name"
     export DEBEMAIL="$email"
 
-    dch -v ${version} --distribution noble $changelog -c ./debian/changelog
+    # Update the changelog.
+    dch -v ${version} --distribution noble "$changelog" -c ./debian/changelog
 
+    # Check if the command was successful.
     if [[ $? -ne 0 ]]; then
         echo "[ERROR] Could not update changelog. Exiting."
         exit 5
     fi
 }
 
+#######################################
+# Publishes a new version of the application on git.
+#
+# Args:
+#   git_folder: The path to the git repository.
+#   tag: The version number to publish.
+#
+# Returns:
+#   0 if the command was successful, 1 otherwise.
+#######################################
 _publish_git_tag() {
-    git_folder="$1"
-    tag="$2"
+    local git_folder="$1"
+    local tag="$2"
 
-    cd $git_folder
+    # Change to the provided git folder.
+    cd "$git_folder"
 
+    # Commit all changes.
     git add .
     git commit -m "Launches tag $tag"
-    git push 
 
-    git tag -a $tag -m "Launches tag $tag" 
-    git push origin $tag
+    # Push all changes to the origin.
+    git push
+
+    # Tag the commit with the provided version.
+    git tag -a "$tag" -m "Launches tag $tag"
+
+    # Push the tag to the origin.
+    git push origin "$tag"
 }
 
+#######################################
+# Builds a debian package for the application.
+#
+# Args:
+#   version: The new version number for the package.
+#   full_name: The full name of the person making the change.
+#   email: The email address of the person making the change.
+#   changelog: The changelog message.
+#######################################
 _build() {
     if [[ $arg_skip_changelog -ne 1 ]]; then
         version="$1"
@@ -61,49 +101,63 @@ _build() {
         fi
 
         if [[ -z $changelog ]]; then
-            echo "[ERROR] Changelog message is missing"    
+            echo "[ERROR] Changelog message is missing"
             exit 4
         fi
 
+        # Update the changelog.
         _update_changelog "$version" "$full_name" "$email" "$changelog"
     fi
 
+    # Create a temporary build folder.
     build_dir=$(mktemp -d)
     build_folder=$(pwd)
     current_tag=$(cat debian/changelog | head -n 1 | cut -d '(' -f2 | cut -d ')' -f1)
     tag_folder="$build_folder/tags/$current_tag"
 
     if [[ ! -d $tag_folder ]]; then
+        # Create the tag folder if it doesn't exist.
         mkdir -p $tag_folder
     fi
 
     echo $tag_folder
 
+    # Copy all files to the build folder.
     cp -r $build_folder/* $build_dir
 
     cd $build_dir
 
+    # Create the required folders.
     mkdir -p debian/usr/share/botmoni/
 
+    # Copy all files to the build folder.
     cp -r $build_folder/* $build_dir/debian/usr/share/botmoni/
 
+    # Define the files to remove from the build folder.
     files=("debian" ".env.example" "tests" ".editorconfig" ".git*" "README.md" "bin" "ci" "virus_total" ".env" "build_deb_package.sh" "tags" )
 
+    # Remove all the defined files from the build folder.
     for item in ${files[@]}; do
         if [[ -f "debian/usr/share/botmoni/$item" || -d "debian/usr/share/botmoni/$item" ]]; then
             rm -rf $build_dir/debian/usr/share/botmoni/$item
         fi
     done
 
+    # Create the required folders.
     mkdir -p debian/etc/botmoni/
 
+    # Copy the .env.example file to the /etc/botmoni folder.
     cp $build_folder/.env.example debian/etc/botmoni/
 
+    # Build the deb package.
     debuild -us -uc -i &> /dev/null
 
     if [[ $? -eq 0 && -f /tmp/botmoni_${current_tag}_all.deb ]]; then
-        mv /tmp/botmoni_${current_tag}_all.deb $tag_folder 
-        _publish_git_tag $build_folder $current_tag 
+        # Move the package to the tag folder.
+        mv /tmp/botmoni_${current_tag}_all.deb $tag_folder
+
+        # Publish the new tag on git.
+        _publish_git_tag $build_folder $current_tag
     fi
 }
 

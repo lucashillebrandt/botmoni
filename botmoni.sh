@@ -50,8 +50,6 @@ _validate_plugins() {
 
 _validate_plugins
 
-path=
-
 # Import Environment Variables
 test /etc/botmoni/.env && source /etc/botmoni/.env
 
@@ -137,37 +135,41 @@ _maybe_remove_scan_file() {
     exit 4
   fi
 
-  if [[ -f "./virus_total/domain/${domain}.json" ]]; then
+  if [[ -f "${botmoni_folder}/virus_total/domain/${domain}.json" ]]; then
     # Check if file is older than 1 day
 
-    if [[ $(find "./virus_total/domain/${domain}.json" -mtime +1) ]]; then
+    if [[ $(find "${botmoni_folder}/virus_total/domain/${domain}.json" -mmin +1440) ]]; then
 
-      rm "./virus_total/domain/${domain}.json"
+      rm "${botmoni_folder}/virus_total/domain/${domain}.json"
     fi
   fi
 }
 
 #######################################
 # Maybe remove notification file from VirusTotal if it's older than 1 day.
+#
 # Globals:
 #   None
 # Arguments:
 #   Domain
+# Outputs:
+#   None
 #######################################
 _maybe_remove_notification_file() {
   local domain="$1"
 
+  # Check if domain is missing
   if [[ -z "$domain" ]]; then
     echo "[ERROR] - Domain Missing"
     exit 4
   fi
 
-  if [[ -f "./virus_total/notifications/${domain}" ]]; then
+  # Check if the notification file exists
+  if [[ -f "${botmoni_folder}/virus_total/notifications/${domain}" ]]; then
     # Check if file is older than 1 day
-
-    if [[ $(find "./virus_total/notifications/${domain}" -mmin +1440) ]]; then
-
-      rm "./virus_total/notifications/${domain}"
+    if [[ $(find "${botmoni_folder}/virus_total/notifications/${domain}" -mmin +1440) ]]; then
+      # Remove the file if it's older than one day
+      rm "${botmoni_folder}/virus_total/notifications/${domain}"
     fi
   fi
 }
@@ -188,7 +190,7 @@ _check_virus_total_quota() {
   fi
 
   local quota
-  local quota_dir="./virus_total/quota"
+  local quota_dir="${botmoni_folder}/virus_total/quota"
   mkdir -p "$quota_dir"
 
   local hourly_exhausted_file="$quota_dir/hourly_quota_exhausted"
@@ -262,20 +264,20 @@ _check_for_malware() {
   # shellcheck disable=SC2068
   for domain in ${domains[@]}; do
     # Checks if the directory to store the results exists. If not, create it.
-    if [[ ! -d ./virus_total/domain ]]; then
-      mkdir -p ./virus_total/domain;
+    if [[ ! -d "${botmoni_folder}/virus_total/domain" ]]; then
+      mkdir -p "${botmoni_folder}/virus_total/domain";
     fi
 
     # Checks if the directory to store the results exists. If not, create it.
-    if [[ ! -d ./virus_total/notifications ]]; then
-      mkdir -p ./virus_total/notifications
+    if [[ ! -d "${botmoni_folder}/virus_total/notifications" ]]; then
+      mkdir -p "${botmoni_folder}/virus_total/notifications"
     fi
 
     # Removed previous scan after 24 hours.
     _maybe_remove_scan_file "$domain"
     quota=$(_check_virus_total_quota)
 
-    result_file="./virus_total/domain/${domain}.json"
+    result_file="${botmoni_folder}/virus_total/domain/${domain}.json"
 
     if [[ ! -f $result_file ]]; then
       if [[ -n $quota && ! -f $result_file  ]]; then
@@ -315,18 +317,18 @@ _check_for_malware() {
         if [[ $status == "malicious" || $status == "suspicious" ]]; then
           _maybe_remove_notification_file $domain
 
-          if [[ ! -f ./virus_total/notifications/$domain ]]; then
+          if [[ ! -f "${botmoni_folder}virus_total/notifications/$domain" ]]; then
             echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
             if [[ -z $arg_skip_email ]]; then
               _send_email "[EMERGENCY] Antivirus $engine has flagged the domain $domain as $status" "The Antivirus $engine has flagged the domain $domain as $status. Please review"
             fi
 
             if [[ -n $slack_malware_webhook && -z $arg_skip_slack ]]; then
-              source ./helpers/slack.sh
+              source "${botmoni_folder}/helpers/slack.sh"
               send_slack $slack_malware_webhook "$domain"
             fi
 
-            touch ./virus_total/notifications/$domain
+            touch "${botmoni_folder}/virus_total/notifications/$domain"
           else
             "Notification was sent recently for the domain $domain. Waiting 24 hours before next notification"
           fi
@@ -357,7 +359,7 @@ _send_email() {
   local message
 
   # Load the email.sh script and use the _send_mail function.
-  source ./helpers/email.sh
+  source "${botmoni_folder}/helpers/email.sh"
 
   # Get the recipient's email address
   if [[ -n $arg_email ]]; then
