@@ -330,7 +330,7 @@ _check_for_malware() {
 
             touch "${botmoni_folder}/virus_total/notifications/$domain"
           else
-            "Notification was sent recently for the domain $domain. Waiting 24 hours before next notification"
+            echo "Notification was sent recently for the domain $domain. Waiting 24 hours before next notification"
           fi
         fi
       done
