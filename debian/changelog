@@ -1,3 +1,9 @@
+botmoni (0.4) noble; urgency=medium
+
+  * Fixes typo.
+
+ -- Lucas Hillebrandt <lucas@lucashillebrandt.com.br>  Sun, 03 Nov 2024 16:39:02 -0600
+
 botmoni (0.3) noble; urgency=medium
 
   * Enhanced botmoni.sh script, now adding the path for the botmoni
