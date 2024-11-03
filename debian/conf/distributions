@@ -1,0 +1,17 @@
+Origin: server.lucashillebrandt.com.br
+Label: apt repository
+Codename: noble
+Architectures: amd64 source
+Components: main
+Description: Botmoni Debian Package
+    Tool that enables botmoni.sh scripts in the server. Can be used for monitoring websites on port 443 and also check if the domain has been flagged as malicious by one of many partners of VirusTotal. 
+SignWith: yes
+
+Origin: server.lucashillebrandt.com.br
+Label: apt repository
+Codename: jammy
+Architectures: amd64 source
+Components: main
+Description: Botmoni Debian Package
+    Tool that enables botmoni.sh scripts in the server. Can be used for monitoring websites on port 443 and also check if the domain has been flagged as malicious by one of many partners of VirusTotal. 
+SignWith: yes

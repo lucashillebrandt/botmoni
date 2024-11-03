@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ln -s /usr/share/botmoni/botmoni.sh /usr/bin/botmoni

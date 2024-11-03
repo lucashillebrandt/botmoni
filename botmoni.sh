@@ -50,8 +50,10 @@ _validate_plugins() {
 
 _validate_plugins
 
+path=
+
 # Import Environment Variables
-test .env && source .env
+test /etc/botmoni/.env && source /etc/botmoni/.env
 
 #######################################
 # Checks if the site currently is available in the internet.
@@ -358,7 +360,7 @@ _parse_args() {
 
 _parse_args $*
 
-[[ -n $arg_verbose ]] && stdout="" || stdout="1> /dev/null"
+#[[ -n $arg_verbose ]] && stdout="" || stdout="1> /dev/null"
 
 case "$1" in
     check_uptime)

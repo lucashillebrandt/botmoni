@@ -35,7 +35,7 @@ if [[ -z $email_from_name || -z $email_address || -z $email_password || -z $to_e
 fi
 
 # Import Environment Variables
-test ../.env && source ../.env
+test /etc/botmoni/.env && source /etc/botmoni/.env
 
 if [[ ! -f ~/.msmtprc ]]; then
   echo "

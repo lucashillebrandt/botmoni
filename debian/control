@@ -1,0 +1,13 @@
+Source: botmoni
+Section: web
+Priority: optional
+Maintainer: Lucas Hillebrandt <lucas@lucashillebrandt.com.br>
+Homepage: https://botmoni.com
+Build-Depends: debhelper
+
+Package: botmoni
+Architecture: all
+Description: Debian Package for Botmoni
+    Tool that enables botmoni.sh scripts in the server. 
+    Can be used for monitoring websites on port 443 and also check if the domain has been flagged as malicious by one of many partners of VirusTotal.
+Depends: curl, jq, openssl, msmtp, ${misc:Depends}

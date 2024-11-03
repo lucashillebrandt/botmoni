@@ -6,7 +6,7 @@
 # LICENSE: GPLv3
 
 # Import Environment Variables
-test ../.env && source ../.env
+test /etc/botmoni/.env && source /etc/botmoni/.env
 
 # Sends a Slack notification to the specified webhook_url about Malwares found during a review.
 #
