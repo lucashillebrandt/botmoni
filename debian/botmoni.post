@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if [[ -f /usr/bin/botmoni ]]; then
+    rm -f /usr/bin/botmoni
+fi

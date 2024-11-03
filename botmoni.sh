@@ -148,6 +148,31 @@ _maybe_remove_scan_file() {
 }
 
 #######################################
+# Maybe remove notification file from VirusTotal if it's older than 1 day.
+# Globals:
+#   None
+# Arguments:
+#   Domain
+#######################################
+_maybe_remove_notification_file() {
+  local domain="$1"
+
+  if [[ -z "$domain" ]]; then
+    echo "[ERROR] - Domain Missing"
+    exit 4
+  fi
+
+  if [[ -f "./virus_total/notifications/${domain}" ]]; then
+    # Check if file is older than 1 day
+
+    if [[ $(find "./virus_total/notifications/${domain}" -mmin +1440) ]]; then
+
+      rm "./virus_total/notifications/${domain}"
+    fi
+  fi
+}
+
+#######################################
 # Checks if the VirusTotal API quota has been exceeded.
 # Globals:
 #   virus_total_api_key
@@ -241,8 +266,13 @@ _check_for_malware() {
       mkdir -p ./virus_total/domain;
     fi
 
+    # Checks if the directory to store the results exists. If not, create it.
+    if [[ ! -d ./virus_total/notifications ]]; then
+      mkdir -p ./virus_total/notifications
+    fi
+
     # Removed previous scan after 24 hours.
-    _maybe_remove_scan_file "$1"
+    _maybe_remove_scan_file "$domain"
     quota=$(_check_virus_total_quota)
 
     result_file="./virus_total/domain/${domain}.json"
@@ -283,14 +313,22 @@ _check_for_malware() {
         status=$(echo "$line" | cut -d ',' -f2 | sed 's/"//g')
 
         if [[ $status == "malicious" || $status == "suspicious" ]]; then
-          echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
-          if [[ -z $arg_skip_email ]]; then
-            _send_email "[EMERGENCY] Antivirus $engine has flagged the domain $domain as $status" "The Antivirus $engine has flagged the domain $domain as $status. Please review"
-          fi
+          _maybe_remove_notification_file $domain
 
-          if [[ -n $slack_malware_webhook && -z $arg_skip_slack ]]; then
-            source ./helpers/slack.sh
-            send_slack $slack_malware_webhook "$domain"
+          if [[ ! -f ./virus_total/notifications/$domain ]]; then
+            echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
+            if [[ -z $arg_skip_email ]]; then
+              _send_email "[EMERGENCY] Antivirus $engine has flagged the domain $domain as $status" "The Antivirus $engine has flagged the domain $domain as $status. Please review"
+            fi
+
+            if [[ -n $slack_malware_webhook && -z $arg_skip_slack ]]; then
+              source ./helpers/slack.sh
+              send_slack $slack_malware_webhook "$domain"
+            fi
+
+            touch ./virus_total/notifications/$domain
+          else
+            "Notification was sent recently for the domain $domain. Waiting 24 hours before next notification"
           fi
         fi
       done
