@@ -317,7 +317,7 @@ _check_for_malware() {
         if [[ $status == "malicious" || $status == "suspicious" ]]; then
           _maybe_remove_notification_file $domain
 
-          if [[ ! -f "${botmoni_folder}virus_total/notifications/$domain" ]]; then
+          if [[ ! -f "${botmoni_folder}/virus_total/notifications/$domain" ]]; then
             echo "The Antivirus $engine has flagged the domain $domain as $status. Please review"
             if [[ -z $arg_skip_email ]]; then
               _send_email "[EMERGENCY] Antivirus $engine has flagged the domain $domain as $status" "The Antivirus $engine has flagged the domain $domain as $status. Please review"
